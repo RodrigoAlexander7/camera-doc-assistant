@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import types
 from app.core.config import settings
 import requests
 import json
@@ -6,23 +7,28 @@ import json
 
 class GeminiService:
     def __init__(self):
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.client = genai.Client()
 
     async def analyze_image(self, file_content: bytes, mime_type: str):
         prompt = """
-        Analyze the provided image.
+        Analyze the provided image and return the answer in.
         Identify if it is a "medical prescription" (receta medica) or a "legal document" (documento legal).
         Provide a brief explanation of the document content.
         Return the result in JSON format with the following keys:
         - type: "medical_prescription" or "legal_document" or "other"
-        - explanation: A brief explanation of the document.
+        - explanation: A brief explanation of the document in spanish.
         - extracted_text: (Optional) Any key text extracted from the document to help with the query.
         """
 
-        cookie_picture = {"mime_type": mime_type, "data": file_content}
+        image = types.Part.from_bytes(
+            data=file_content,
+            mime_type=mime_type,
+        )
 
-        response = self.model.generate_content([prompt, cookie_picture])
+        response = self.client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[prompt, image],
+        )
 
         try:
             # Clean up the response text to ensure it's valid JSON
